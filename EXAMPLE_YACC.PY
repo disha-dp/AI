@@ -1,40 +1,57 @@
 import ply
+import copy
+
+index = 0
+theta = {}
+
+
+queries = []
+inputSentences = []
+#file read
+def read_data():
+    global inputSentences, queries
+    file_data = open("input.txt")
+    print file_data
+    NQ = int(file_data.readline().strip())
+    
+    for _ in range(NQ):
+        queries.append(file_data.readline().strip())
+
+    NS = int(file_data.readline().strip())
+    for _ in range(NS):
+        inputSentences.append(file_data.readline())
+
 
 try:
-    from pyparsing import (alphanums, alphas, delimitedList, Forward,nums,Optional,
-            Group, Keyword, Literal, opAssoc, operatorPrecedence,
-            ParserElement, ParseException, ParseSyntaxException, Suppress,
+    from pyparsing import (alphanums, alphas, delimitedList, Forward,nums,Optional,Group, Literal, opAssoc, operatorPrecedence, ParseSyntaxException, ParseException,
             Word)
 except ImportError:
-    from pyparsing_py3 import (alphanums, alphas, delimitedList, Forward,
-            Group, Keyword, Literal, opAssoc, operatorPrecedence,
-            ParserElement, ParseException, ParseSyntaxException, Suppress,
-            Word)
-
-'''
-ident = Word(alphas)
-num = Word(nums)
-term = ident | num
-func = ident + Optional(delimitedList(term))
-print(func.parseString("fn a,b,100"))  # -> ['fn', 'a', 'b', '100']
-
-func = ident + Group(Optional(delimitedList(term)))
-print(func.parseString("fn a,b,100"))  # -> ['fn', ['a', 'b', '100']]
-'''
-
-'''
-make it to read expressions with bracket as a single term
-'''
-
+    pass 
 print "--------------------------TODO: CHANGE CODE--------------------"
 
-def actCombineWord(word):
-    return ''.join(x for x in word)
 
-def parse(text):
-    #only_small_list = list(alphas)[:26]
-    #only_small = ''.join(x for x in only_small_list) 
-    #left_parenthesis, right_parenthesis, colon = map(Suppress, "():")
+
+def actCombineWord(  word):
+    global index
+    word = list(word)
+
+    idxOpen = (word).index('(')
+    part1 = word[:idxOpen+1]
+    part2 = ""
+    for x in range(idxOpen+1 , len(word) -1):
+        part2 +=  word[x] 
+        if word[x][0].islower():
+            part2 += str(index)
+        part2 +=','
+    part2 = part2[:-1]
+    part3 = ')'
+
+    return [''.join(x for x in part1) +part2+ part3]    
+
+def parse(text ):
+    global index
+    index+=1
+
     left_parenthesis, right_parenthesis =  "(",")"
     
     implies = Literal("=>")
@@ -42,20 +59,18 @@ def parse(text):
     and_ = Literal("&")
     not_ = Literal("~")
     symbol = (Optional(not_)+ Word(alphas) + left_parenthesis + delimitedList(Word(alphas)) + right_parenthesis).setParseAction(actCombineWord) #, alphanums) 
-    #   agg_sym = symbol + Optional(left_parenthesis) + Optional(delimitedList(variable)) + Optional(delimitedList(symbol))  + Optional(right_parenthesis)# | symbol | right_parenthesis)
     term = Forward()
-    #term << (Group(agg_sym + Group(left_parenthesis +
-    #               delimitedList(term) + right_parenthesis)) | agg_sym)
     
     term << (Group(symbol + Group(left_parenthesis +
                    delimitedList(term) + right_parenthesis)) | symbol)
 
 
+    #term << (Group(symbol + Group(left_parenthesis + symbol + right_parenthesis)) |symbol )
+
     formula = Forward()
     operand = term
 
     formula << operatorPrecedence(operand, [
-                                  #(not_, 1, opAssoc.RIGHT),
                                   (and_, 2, opAssoc.LEFT),
                                   (or_, 2, opAssoc.LEFT),
                                   (implies, 2, opAssoc.RIGHT)])
@@ -71,10 +86,6 @@ def parse(text):
 '''
 - use understanding to get that there can be things as variables and constants
 '''
-
-
-#A(x) => H(x)
-#print parse("(~A(x) & H(x))") #[['~', ['A', ['x']]], '&', ['H', ['x']]]
 
 def resolveImplication(expr):
     print 'resolveImplication......', expr
@@ -146,13 +157,6 @@ def applyNegation(expr):
     for term in expr:
         print 'term to negate: ', term
 
-        #if prevTerm == '~' and type(term) is list:
-        #    print 'sub term apply negation', term
-            
-        #    term = applyNegation(term)
-        #    print 'return from apply negation'
-
-
         if term == '~':
             prevTerm = '~' 
             continue
@@ -187,11 +191,6 @@ def applyNegation(expr):
                 term = '|'
 
             elif term[0]== '~':
-                #print 'before neg removal:...',expr , term
-                #expr.remove(term)
-                #print 'after neg removal:...',expr 
-                
-                #term = term[1:] 
 
                 continue
 
@@ -253,43 +252,19 @@ def bracketOpen(expr):
     outerListOperand = expr[1]
     lhs = expr[0]
     rhs = expr[2]
-    print  'outerListOperand :  ',outerListOperand
+    #print  'outerListOperand :  ',outerListOperand
     
     #if type(lhs) is not list and type(rhs) is not list :
 
     if type(lhs) is list:
         lInter = bracketOpen(lhs)
-        print 'converted lhs using bOpen....', lInter
+        #print 'converted lhs using bOpen....', lInter
         innerLHSOper = lhs[1]
         if innerLHSOper == outerListOperand:
             for term in lInter:
                 finalTerms.append( term )
         else:
             finalTerms.append(lInter)
-        '''innerOPer = lhs[1]
-        inList = []
-        for lTerm in lhs:
-            if type(lTerm) is list:
-                lInter = bracketOpen(lTerm)
-                if lInter[1] == innerOPer:
-                    for t in lInter:
-                        inList.append(t)
-                else:
-                    inList.append(lInter)
-            else:
-                inList.append(lTerm)
-            
-
-        #finalTerms.append(inList)
-        lt2 = lhs[1]
-        if lt2 == outerListOperand:
-            for lTerm in inList:
-                finalTerms.append(lTerm) 
-            
-            finalTerms.append(outerListOperand)
-        else:
-            finalTerms.append([inList])'''
-
     else:
         finalTerms.append(lhs)
 
@@ -297,7 +272,7 @@ def bracketOpen(expr):
 
     if type(rhs) is list:
         rInter = bracketOpen(rhs)
-        print 'converted rhs using bOpen....', rInter
+        #print 'converted rhs using bOpen....', rInter
         innerRHSOper = rInter[1]
         if innerRHSOper == outerListOperand:
 
@@ -307,30 +282,7 @@ def bracketOpen(expr):
             finalTerms.append(rInter)
         #finalTerms.append( rInter )
         
-        '''innerOPer = rhs[1]
-        inList = []
-        for rTerm in rhs:
-            if type(rTerm) is list:
-                rInter = bracketOpen(rTerm)
-                if rInter[1] == innerOPer:
-                    for t in rInter:
-                        inList.append(t)
-                else:
-                    inList.append(rInter)
-            else:
-                inList.append(rTerm)
-        
-
-        #finalTerms.append(inList)
-        rt2 = rhs[1]
-        if rt2 == outerListOperand:
-            for rTerm in inList:
-                finalTerms.append(rTerm) 
-            
-            #finalTerms.append(outerListOperand)
-        else:
-            finalTerms.append([inList])'''
-
+   
     else:
         #finalTerms.append(outerListOperand)
         finalTerms.append(rhs)
@@ -353,7 +305,7 @@ def appendAndOr(termOfOr , listOfAndTerms):
 
         CNFList.append(l1)
         CNFList.append('&')
-    print '=========after distributing OR over AND:', CNFList
+    #print '=========after distributing OR over AND:', CNFList
     CNFList= CNFList[:-1]
     
     return CNFList
@@ -379,63 +331,60 @@ def doCNFStep3(parsed_op_CNF2):
 
     #A|B or A&B
     if type(t1) is not list and type(t3) is not list:
-        print 't1 is not a list and t3 is also not a list'
-        #finalOp.append([t1])
-        #finalOp.append(t2)
-        #finalOp.append([t3])
+        #print 't1 is not a list and t3 is also not a list'
 
         return parsed_op_CNF2
     #only second one is a list
     #A| (B..)   =====   if B has an & then   A|B  & A|...
     elif type(t1) is not list:
-        print 't1 is not a list and t3 is  a list'
+        #print 't1 is not a list and t3 is  a list'
         ret = doCNFStep3(t3)
-        print 'now trying to append t1 to terms of t3 list ', ret, t1
+        #print 'now trying to append t1 to terms of t3 list ', ret, t1
 
         if  t2 == '|' :
             if '&' in ret: #conditino when we need to distribute | over the inner and returned
                 finalOp = appendAndOr(t1,ret)
             else: #no & in the  list?????
-                print 'No & in the  list ......' , ret
+                #print 'No & in the  list ......' , ret
                 finalOp.append(t1 )
                 finalOp.append(t2)
                 finalOp.append( ret)
-                print 'finalOP!!', finalOp
+                #print 'finalOP!!', finalOp
         else: #no | in the final list
-            print 'No | in the final list, so no distribution needed?' , t1 , 'ret....', ret
+            #print 'No | in the final list, so no distribution needed?' , t1 , 'ret....', ret
             finalOp.append(t1 )
             finalOp.append(t2)
             finalOp.append( ret)
-            print 'finalOP!!', finalOp
+            #print 'finalOP!!', finalOp
  
     elif type(t3) is not list:
-        print 't1  is a list and t3 is not a list'
+        #print 't1  is a list and t3 is not a list'
         ret = doCNFStep3(t1)
-        print 'now trying to append t3 to terms of t1 list ', ret, t3
+        #print 'now trying to append t3 to terms of t1 list ', ret, t3
 
         if  t2 == '|' :
             if '&' in ret: #conditino when we need to distribute | over the inner and returned
                 finalOp = appendAndOr(t3,ret)
             else: #no & in the  list?????
-                print 'No & in the  list ......' , ret
+                #print 'No & in the  list ......' , ret
                 finalOp.append(ret)
                 finalOp.append(t2)
                 finalOp.append(t3 )
-                print 'finalOP!!' ,ret, 't2:', t2 , t3
+                #print 'finalOP!!' ,ret, 't2:', t2 , t3
         else: #no | in the final list
-            print 'No | in the final list, so no distribution needed?' , t1 , 'ret....', ret
+            #print 'No | in the final list, so no distribution needed?' , t1 , 'ret....', ret
             finalOp.append( ret)
             finalOp.append(t2)
             finalOp.append(t1 )
-            print 'finalOP!!' , ret, 't2:', t2 , t3
+            #print 'finalOP!!' , ret, 't2:', t2 , t3
     
     else:
-        print 't1 is : ', t1
+        #print 't1 is : ', t1
         ret1 = doCNFStep3(t1)
         ret3 = doCNFStep3(t3)
-        print 'BOTH LISTS' , t2
-        print  ret1
-        print  ret3
+        #print 'BOTH LISTS' , t2
+        #print  ret1
+        #print  ret3
         #return 
         
         if t2 == '|':
@@ -483,18 +432,257 @@ orig_sentence = "( ( (A(x)=>B(i)) & D(v)) => (C(x) => (~R(v)) ) )"
 #orig_sentence = " ( ( (~A(x))  & (~B(y))) | C(z)) "
 
 
+def applyNegation1(query):
+    return ['~' + ''.join(x for x in  query)]
 
-inputData = [ "A(x)& C(n)" 
-            "( ( (A(x)=>B(i)) & D(v)) => (C(x) => (~R(v)) ) )"
+def negPred(pred):
+    if pred[0]== "~":
+        return pred[1:]
+    #return '~' + pred
+    return '~' + ''.join(x for x in  pred)
+
+
+def compound(term):
+    if '(' not in term :
+        return False
+    return True
+
+def unify_var(var,x,theta):#x is diff 
+    all_keys = theta.keys()
+    if  var in all_keys:
+        return unify(theta[var],x,theta)
+
+    elif x in all_keys:
+        return unify(var,theta[x],theta)
+    else:
+        theta[var]= x
+        print 'theta from unify var:',theta
+        return theta
+
+
+
+def unify(x,y,theta):
+    #x = variable / constant / list / compound expression
+    #y = variable / constant / list / compound expression 
+    print 'unify..... x:',x, 'y:',y ,theta
+    if '(' not in x and ',' in x and '(' not in y and  ',' in y:
+        x = x.split(',')
+        y = y.split(',')
+    print 'unify..... x:',x, 'y:',y
+    #print theta
+    if theta ==None:
+        return None
+
+    elif x == y:
+        print 'equal x and y!!!'
+        return theta
+
+    elif type(x) is str and  x.islower():
+        print 'x[0] is lower!' ,x,y,'Call unify Var'
+        return unify_var(x, y, theta)
+ 
+    elif type(y) is str and y.islower():
+        print 'y[0] is lower!' ,x,y,'Call unify Var'
+
+        return unify_var(y,x, theta)
+
+    elif compound(x) and compound(y): #Father(x,y) 
+        opBracX = x.index('(')
+        opBracY = y.index('(')
+        return unify(x[opBracX+1:-1], y[opBracY+1:-1],unify(x[:opBracX] ,y[:opBracY],theta))
+
+    elif type(x) is list and type(y) is list:#get param by param
+        print 'WE HAVE LIST OF ARGS!!!', x , y  
+        return unify(x[1:] ,y[1:],unify(x[0],y[0],theta))
+
+    else :
+        return None 
+
+
+
+def putValForVar(clause, k, val):
+    return clause[0].replace(k,val)
+
+
+def substitute_theta(resolved_clause , theta):
+    
+    sent = copy.deepcopy(resolved_clause)
+
+    print 'substitute_theta ....', sent , theta
+    for key in theta:
+        #print 'k: ', key , 'vals: ', theta[key]
+        vals = theta[key]
+        k= key
+        len_clause = len(sent)
+        for idx in range(len_clause):
+            sent[idx] = putValForVar(sent, k,vals )
+    return sent
+
+
+def standardize(clause):
+    global index
+    for pred in clause:
+        idxOpenBrac = pred.index('(')
+        for pred in clause:
+            part1 =  pred[:idxOpenBrac]
+            allLiterals = pred[idxOpenBrac+1 : -1].split(',')
+            part2 = ""
+            for x in allLiterals:
+                part2 +=  x 
+                if x[0].islower():
+                    part2 += str(index)
+                part2 +=','
+            part2 = part2[:-1]
+
+    index+=1
+
+
+
+def union(a, b):
+    return list(set(a) | set(b))
+
+
+def resolve(c1,c2):
+    c1copy = copy.deepcopy(c1)
+    c2copy = copy.deepcopy(c2)
+    global theta
+    resolved_clauses =[]#//list of resolved claueses. more than one literal can resolve with another in the two senteces. 
+                           #??????//Create one for each. There should be an unification with a constant existing. Else fail the unification.
+    
+    #//check if p1 and p2 are negation of eachother. Basically check for conditions for resolution.
+    #print 'resolve: c1', c1copy
+    #print 'resolve with c2', c2copy
+    for  p1,p2 in zip(c1copy,c2copy):#do 
+        #print 'try unifying: p1 :',p1, 'and p2: ',p2
+        p1m = p1
+        p2m = p2
+        if p1[0]=='~':
+            p1m=p1[1:]
+
+        if p2[0]=='~':
+            p2m=p2[1:]
+        print 'p1!! ', p1 , 'p2: ', p2
+        theta = unify(p1m,p2m,theta) 
+        #print c1copy, c2copy  
+
+        print theta
+        if theta:
+            c1copy.remove(p1)
+            c2copy.remove(p2)
+            resolved_clause = []
+            preds = union(c1copy,c2copy)
+            for p in preds:
+                resolved_clause.append(p)  #union({prediactes(c1) | p1},{predicates(c2) | p2}) #//add all predicates except p1 and p2
+            print 'resolved clause is: ', resolved_clause
+            if len(resolved_clause)==0: 
+                print 'empty list!!!!!'
+                continue
+            substitutedStr = substitute_theta(resolved_clause ,theta )
+            print 'substituted clause....' , resolved_clause ,substitutedStr
+            standardize(substitutedStr) #//This is important because, a new clause is created and it should have new variables than the ones in kb.
             
-            ]
+            resolved_clauses.append(resolved_clause)
+        else:
+            print'no resolution was possinle '
+    return resolved_clauses
 
-for sent in inputData:
-    stanSent = Standardize(sent)
 
-    parsed_input =  parse(orig_sentence) # 
+
+def resolution( KB, query ):
+    global mapPC
+    resolvents = [] #use a priority queue that sorts the claueses based on number of literals.
+    negated_query = applyNegation1(query)
+    resolvents.append(negated_query)
+    resolvents.sort(key=len)
+    num_iter = 0
+    max_iter = 10000
+    
+    while len(resolvents) > 0  and num_iter < max_iter :
+        print 'resolvents now: ',resolvents
+        num_iter = num_iter + 1
+        c1 = resolvents[0]
+        resolvents = resolvents[1:]
+
+        possible_clauses = []
+        
+        for predicate in c1 : #creates all possible subsets of claueses that c1 can unify with
+            print 'predicate in clause: ' ,predicate
+            negatedPred = negPred(predicate)
+            actualPred = negatedPred[:negatedPred.index('(')]
+            print 'negated predicate to check in KB: ', negatedPred[:negatedPred.index('(')] 
+            if  actualPred in mapPC.keys()  :#then
+
+                possible_clauses.append( mapPC[actualPred] )
+        
+        #if there exist no possible clause continue to next iterations
+        if len(possible_clauses) == 0 :
+            print 'NO POSSIBLE CLAUSES!!!'
+            continue
+
+        newly_resolved =[]  #<- {}
+        for  c2 in possible_clauses[0] :
+            if c1 != c2 :    #then //want to resolve different claueses only, to avoid resolving A(X) | ~A(X) with itself
+                resolved_clauses = resolve(c1,c2)   #//method that resolves using the resolution rule. written as a separate algorithm
+                for  resolved_clause in resolved_clauses:# do
+                    if len(resolved_clause) ==0:    #    is empty :
+                        return True #//contradiction arised
+
+                    if resolved_clause not in KB:# then  //add new clauses to the list of clauses
+                        newly_resolved.append(resolved_clause)
+                        KB.append(resolved_clause)
+                        resolvents.append(resolved_clause)
+                        resolvents.sort(key=len)
+        appendMapPC( newly_resolved )   
+    return False # //comes here when there is nothing more to resolve
+
+
+
+mapPC ={}
+def appendMapPC(KB):
+    print 'append MapPC on', KB
+    global mapPC
+
+    for sent in KB:
+        for term in sent:
+            if type(term) is list:
+                appendMapPC([term])
+            else:
+                #print 'term in appendMapPC: ',type(term)    
+                openBracketIndex = term.index('(')
+                startIndex =0
+
+                pred = term[startIndex:openBracketIndex]
+                literals = term[openBracketIndex:len(term)-1].split(',')
+
+                if pred not in mapPC:
+                    mapPC[pred] = []
+
+                if sent not in mapPC[pred]:
+                    mapPC[pred].append(sent)
+    #print mapPC
+
+inp_file = open("input.txt")
+
+#inputData = [ "(A(x,y)& C(Nerd))" ,
+#              "(A(x,y) | D(x))" ,
+
+#            "(  ( A(x)=> (B(i) & D(v))) => (C(x) => (~R(v)) ) )"
+#            ]
+
+query = ["A(Bob, Pat)"]
+KB = []
+
+
+
+read_data()
+
+print inputSentences
+for i,sent in enumerate(inputSentences):
+    print 'sent in consideration------',sent
+    parsed_input =  parse(sent) # 
 
     #print 'first level parsed:', parsed_input
+    #stanSent = Standardize(parsed_input)
 
     newP1 = doCNFStep1(parsed_input)
 
@@ -510,8 +698,6 @@ for sent in inputData:
     print 'CNF 2 op: ',newP2
 
 
-
-
     #op = bracketOpen(newP2)
     #print '\n\nAfter bracket opening....', op
     op = newP2
@@ -525,32 +711,37 @@ for sent in inputData:
 
     bRem = bracketOpen(newP3)
     print '\n\n after bopen: ', bRem
+    
+    andList = []
+    orList = []
+    for t in bRem:
+        print 'and list looks like....',andList
+        if t == '&':
+            if type(andList[0]) is list:
+                KB.append( filter(lambda a: a != '|', andList[0]))
+            else:
+                KB.append(andList)
 
-    #print parse("((Dog(y) & Owns(x, y)) => Animallover(x))") #[[['Dog', ['y']], '&', ['Owns', ['x', 'y']]], '=>', ['Animallover', ['x']]]
-    #print parse("(Kills(Jack, Tuna) | Kills(Curiosity, Tuna))") #[['Kills', ['Jack', 'Tuna']], '|', ['Kills', ['Curiosity', 'Tuna']]]
-    #print parse("(~(Kills(Curiosity, Tuna)))")#['~', ['Kills', ['Curiosity', 'Tuna']]]
+            andList =[]
+        elif t == '|':
+            continue
+        else:
+            andList.append(t)
+            orList.append(t)
 
+    if type(andList[0]) is list:
+        KB.append( filter(lambda a: a != '|', andList[0]))
+        #KB.append(andList[0])
+    else:
+        KB.append(andList)
 
+    #print 'KBNOw:', KB
+#print 'KB: ', KB
+mapper  = {}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+appendMapPC(KB)
+print '\n\n\n\n\n\n\n========================Starting resolution========================\n\n\n\n\n\n'
+resolution(KB, query)
 
 print "--------------------------TODO: CHANGE CODE--------------------"
 
